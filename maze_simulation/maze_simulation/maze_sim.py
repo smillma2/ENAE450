@@ -12,9 +12,7 @@ class SolveMaze(Node):
         # distance threshold
         self.threshold = 0.5
         
-        # initial state
-        self.state = "follow_maze"
-        
+        self.front = 999
         self.e_dist_l = 999
         self.e_ang_l = 0
         self.e_dist_r = 999
@@ -31,6 +29,7 @@ class SolveMaze(Node):
 
     # get relevant data from lidar scan
     def get_scan_data(self, data):
+        self.front = data.ranges[0]
         
         data_left = [12.0 if x == float('inf') else x for x in data.ranges[45:135]]
         data_right = [12.0 if x == float('inf') else x for x in data.ranges[225:315]]
@@ -47,14 +46,18 @@ class SolveMaze(Node):
     def timer_callback(self):
         message = Twist()
         
-        if self.state == 'follow_maze':
-            aim_angle = self.e_ang_l + self.e_ang_r - 360
-            
-            wall_dist_modifier = (self.e_dist_l - self.e_dist_r) / ((self.e_dist_l + self.e_dist_r)/2)
-            
-            #self.get_logger().info('Goal Angle: %s' % str(aim_angle))
-            message.angular.z = (aim_angle * math.pi/180) + wall_dist_modifier
+        aim_angle = self.e_ang_l + self.e_ang_r - 360
+        
+        wall_dist_modifier = (self.e_dist_l - self.e_dist_r) / ((self.e_dist_l + self.e_dist_r)/2)
+        
+        self.get_logger().info('Wall Mod: %s' % str(wall_dist_modifier))
+        
+        if self.front < self.threshold:
+            message.linear.x = 0.0
+            message.angular.z = 0.1
+        else:
             message.linear.x = 0.1
+            message.angular.z = (aim_angle * math.pi/180) + wall_dist_modifier
             
         # log current state
         #self.get_logger().info(self.state)
