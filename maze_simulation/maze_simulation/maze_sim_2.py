@@ -22,8 +22,6 @@ class SolveMaze(Node):
         self.safe_distance = 0.5  # Safe distance from walls in meters
         self.right_wall_distance = 0.3  # Desired distance from right wall
         self.front_threshold = 0.5  # Threshold distance to consider a wall ahead
-        self.back_threshold = 0.5  # Threshold distance for back wall
-        self.left_threshold = 0.5  # Threshold distance for left wall
         self.angular_speed = 0.5  # Angular speed for turning
         self.linear_speed = 0.15  # Linear speed for forward movement
 
@@ -31,7 +29,6 @@ class SolveMaze(Node):
         self.front_distance = float('inf')
         self.right_distance = float('inf')
         self.left_distance = float('inf')
-        self.back_distance = float('inf')
 
     # Get relevant data from lidar scan
     def get_scan_data(self, data):
@@ -39,78 +36,35 @@ class SolveMaze(Node):
         # Front: 0 degrees
         # Right: -90 degrees
         # Left: +90 degrees
-        # Back: 180 degrees
-        self.front_distance = min(data.ranges[0:45] + data.ranges[-45:])  # 0 degrees
-        self.right_distance = min(data.ranges[225:315])  # -90 degrees
-        self.left_distance = min(data.ranges[45:135])  # +90 degrees
-        self.back_distance = min(data.ranges[135:225])  # 180 degrees
+        num_angles = len(data.ranges)
+        self.front_distance = min(data.ranges[0:10] + data.ranges[-10:])  # 0 degrees
+        self.right_distance = min(data.ranges[int(0.75 * num_angles):int(0.85 * num_angles)])  # -90 degrees
+        self.left_distance = min(data.ranges[int(0.15 * num_angles):int(0.25 * num_angles)])  # +90 degrees
 
-    def is_close(self, distance, threshold):
-        return distance < threshold
-
+    # Main control loop
     def timer_callback(self):
         message = Twist()
 
-        # Determine proximity of walls
-        close_left = self.is_close(self.left_distance, self.left_threshold)
-        close_right = self.is_close(self.right_distance, self.right_wall_distance)
-        close_front = self.is_close(self.front_distance, self.front_threshold)
-        close_back = self.is_close(self.back_distance, self.back_threshold)
-        
-        self.get_logger().info("Front: %s", self.front_distance)
-        self.get_logger().info("Right: %s", self.right_distance)
-        self.get_logger().info("Left: %s", self.left_distance)
-        self.get_logger().info("Back: %s", self.back_distance)
-        self.get_logger().info("Close Left: %s", close_left)
-        self.get_logger().info("Close Right: %s", close_right)
-        self.get_logger().info("Close Front: %s", close_front)
-        self.get_logger().info("Close Back: %s", close_back)
-        
-
-        # Decision making based on combinations of wall distances
-        if close_front:
-            if close_left and close_right:
-                if close_back:
-                    # All sides are close
-                    message.linear.x = 0.0
-                    message.angular.z = self.angular_speed
-                else:
-                    # Left, Right, Front are close, Back is far
-                    message.linear.x = -self.linear_speed
-                    message.angular.z = self.angular_speed
-            elif close_left and not close_right:
-                # Front and Left are close, Right is far
-                message.linear.x = 0.0
-                message.angular.z = -self.angular_speed
-            elif not close_left and close_right:
-                # Front and Right are close, Left is far
-                message.linear.x = 0.0
-                message.angular.z = self.angular_speed
-            else:
-                # Only Front is close
-                message.linear.x = 0.0
-                message.angular.z = self.angular_speed
+        if self.front_distance < self.front_threshold:
+            # Wall in front, turn left until the wall is to the right
+            message.linear.x = 0.0
+            message.angular.z = self.angular_speed
+        elif self.right_distance > self.right_wall_distance:
+            # No wall on the right, turn right while moving forward
+            message.linear.x = self.linear_speed
+            message.angular.z = -self.angular_speed
         else:
-            if close_left and close_right:
-                if close_back:
-                    # Left, Right, Back are close, Front is far
-                    message.linear.x = 0.0
-                    message.angular.z = self.angular_speed if self.left_distance < self.right_distance else -self.angular_speed
-                else:
-                    # Left and Right are close, Front and Back are far
-                    message.linear.x = self.linear_speed * 1/2
-                    message.angular.z = self.angular_speed if self.left_distance < self.right_distance else -self.angular_speed
-            elif close_left and not close_right:
-                # Left is close, Right is far
-                message.linear.x = self.linear_speed
-                message.angular.z = -self.angular_speed
-            elif not close_left and close_right:
-                # Right is close, Left is far
-                message.linear.x = self.linear_speed
-                message.angular.z = self.angular_speed
+            # Wall to the right, move forward while staying parallel to it
+            message.linear.x = self.linear_speed
+
+            # Adjust angular velocity to maintain the desired distance to the right wall
+            if self.right_distance < self.right_wall_distance:
+                # Too close to the right wall, turn left slightly
+                message.angular.z = self.angular_speed / 2
+            elif self.right_distance > self.right_wall_distance:
+                # Too far from the right wall, turn right slightly
+                message.angular.z = -self.angular_speed / 2
             else:
-                # All sides are far
-                message.linear.x = self.linear_speed
                 message.angular.z = 0.0
 
         self.cmdvel_publisher.publish(message)
