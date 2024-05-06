@@ -40,10 +40,10 @@ class SolveMaze(Node):
         # Right: -90 degrees
         # Left: +90 degrees
         # Back: 180 degrees
-        self.front_distance = min(data.ranges[0:10] + data.ranges[-10:])  # 0 degrees
-        self.right_distance = min(data.ranges[260:280])  # -90 degrees
-        self.left_distance = min(data.ranges[80:100])  # +90 degrees
-        self.back_distance = min(data.ranges[170:190])  # 180 degrees
+        self.front_distance = min(data.ranges[0:45] + data.ranges[-45:])  # 0 degrees
+        self.right_distance = min(data.ranges[225:315])  # -90 degrees
+        self.left_distance = min(data.ranges[45:135])  # +90 degrees
+        self.back_distance = min(data.ranges[135:225])  # 180 degrees
 
     def is_close(self, distance, threshold):
         return distance < threshold
@@ -57,14 +57,14 @@ class SolveMaze(Node):
         close_front = self.is_close(self.front_distance, self.front_threshold)
         close_back = self.is_close(self.back_distance, self.back_threshold)
         
-        self.get_logger().info("Front: ", self.front_distance)
-        self.get_logger().info("Right: ", self.right_distance)
-        self.get_logger().info("Left: ", self.left_distance)
-        self.get_logger().info("Back: ", self.back_distance)
-        self.get_logger().info("Close Left: ", close_left)
-        self.get_logger().info("Close Right: ", close_right)
-        self.get_logger().info("Close Front: ", close_front)
-        self.get_logger().info("Close Back: ", close_back)
+        self.get_logger().info("Front: %s", self.front_distance)
+        self.get_logger().info("Right: %s", self.right_distance)
+        self.get_logger().info("Left: %s", self.left_distance)
+        self.get_logger().info("Back: %s", self.back_distance)
+        self.get_logger().info("Close Left: %s", close_left)
+        self.get_logger().info("Close Right: %s", close_right)
+        self.get_logger().info("Close Front: %s", close_front)
+        self.get_logger().info("Close Back: %s", close_back)
         
 
         # Decision making based on combinations of wall distances
