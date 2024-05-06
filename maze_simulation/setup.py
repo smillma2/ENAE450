@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'maze_sim_control = maze_simulation.maze_sim:main',
+            'maze_sim_2 = maze_simulation.maze_sim_2:main',
         ],
     },
 )
