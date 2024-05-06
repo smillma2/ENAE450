@@ -57,14 +57,14 @@ class SolveMaze(Node):
         close_front = self.is_close(self.front_distance, self.front_threshold)
         close_back = self.is_close(self.back_distance, self.back_threshold)
         
-        print("Front: ", self.front_distance)
-        print("Right: ", self.right_distance)
-        print("Left: ", self.left_distance)
-        print("Back: ", self.back_distance)
-        print("Close Left: ", close_left)
-        print("Close Right: ", close_right)
-        print("Close Front: ", close_front)
-        print("Close Back: ", close_back)
+        self.get_logger().info("Front: ", self.front_distance)
+        self.get_logger().info("Right: ", self.right_distance)
+        self.get_logger().info("Left: ", self.left_distance)
+        self.get_logger().info("Back: ", self.back_distance)
+        self.get_logger().info("Close Left: ", close_left)
+        self.get_logger().info("Close Right: ", close_right)
+        self.get_logger().info("Close Front: ", close_front)
+        self.get_logger().info("Close Back: ", close_back)
         
 
         # Decision making based on combinations of wall distances
