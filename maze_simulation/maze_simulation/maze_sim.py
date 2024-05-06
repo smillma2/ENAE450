@@ -10,7 +10,7 @@ class SolveMaze(Node):
         super().__init__('turtle_follower')
         
         # distance threshold
-        self.threshold = 0.5
+        self.threshold = 0.4
         
         self.front = 999
         self.e_dist_l = 999
@@ -54,7 +54,8 @@ class SolveMaze(Node):
         
         if self.front < self.threshold:
             message.linear.x = 0.0
-            message.angular.z = 0.1
+            message.angular.z = 0.1 if self.e_dist_l > self.e_dist_r else -0.1
+            self.get_logger().info('SUPER Wall Mod: %s' % str(wall_dist_modifier))
         else:
             message.linear.x = 0.1
             message.angular.z = (aim_angle * math.pi/180) + wall_dist_modifier
