@@ -56,6 +56,16 @@ class SolveMaze(Node):
         close_right = self.is_close(self.right_distance, self.right_wall_distance)
         close_front = self.is_close(self.front_distance, self.front_threshold)
         close_back = self.is_close(self.back_distance, self.back_threshold)
+        
+        print("Front: ", self.front_distance)
+        print("Right: ", self.right_distance)
+        print("Left: ", self.left_distance)
+        print("Back: ", self.back_distance)
+        print("Close Left: ", close_left)
+        print("Close Right: ", close_right)
+        print("Close Front: ", close_front)
+        print("Close Back: ", close_back)
+        
 
         # Decision making based on combinations of wall distances
         if close_front:
@@ -85,11 +95,11 @@ class SolveMaze(Node):
                 if close_back:
                     # Left, Right, Back are close, Front is far
                     message.linear.x = 0.0
-                    message.angular.z = self.angular_speed
+                    message.angular.z = self.angular_speed if self.left_distance < self.right_distance else -self.angular_speed
                 else:
                     # Left and Right are close, Front and Back are far
-                    message.linear.x = self.linear_speed
-                    message.angular.z = 0.0
+                    message.linear.x = self.linear_speed * 1/2
+                    message.angular.z = self.angular_speed if self.left_distance < self.right_distance else -self.angular_speed
             elif close_left and not close_right:
                 # Left is close, Right is far
                 message.linear.x = self.linear_speed
@@ -97,7 +107,7 @@ class SolveMaze(Node):
             elif not close_left and close_right:
                 # Right is close, Left is far
                 message.linear.x = self.linear_speed
-                message.angular.z = 0.0
+                message.angular.z = self.angular_speed
             else:
                 # All sides are far
                 message.linear.x = self.linear_speed
