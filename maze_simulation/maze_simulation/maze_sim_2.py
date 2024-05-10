@@ -1,3 +1,4 @@
+import random
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan as Scan
@@ -16,50 +17,97 @@ class SolveMaze(Node):
 
         # Subscription initialization
         self.scan_subscriber = self.create_subscription(Scan, '/scan', self.get_scan_data, 10)
-
-        # State initialization
-        self.state = 1  # Start following the right wall
-
-        # Parameters
-        self.safe_distance = 0.5  # Safe distance from walls
-        self.right_wall_distance = 0.3  # Desired distance from the right wall
-        self.front_threshold = 0.5  # Threshold distance for front wall
-
-        # Initialize sensor data
-        self.front_distance = float('inf')
-        self.right_distance = float('inf')
-        self.left_distance = float('inf')
+        
+        # states = ["finding wall", "turning_right_start", "turning_right_end", "turning_left_start", "turning_left_end"]
+        self.state = "finding_wall"
+        self.turn_counter = 10
+        
+        self.data = None
+        
 
     def get_scan_data(self, data):
         # Extract distances at specific angles
-        self.front_distance = min(data.ranges[0:10] + data.ranges[-10:])  # Front
-        self.right_distance = min(data.ranges[260:280])  # Right
-        self.left_distance = min(data.ranges[80:100])  # Left
+        self.data = data.ranges
+        
+    def is_right_wall_contiguous(right_data):
+        right_data = [12 if x == float('inf') else x for x in right_data]
+        # Initialize a counter for persistent jumps
+        persistent_jump_count = 0
+        
+        # Iterate over the data starting from the second element
+        for i in range(1, len(right_data)):
+            # Check if there is a significant jump from the previous data point
+            if right_data[i] - right_data[i-1 - persistent_jump_count] > 1:
+                # Increment the jump counter
+                persistent_jump_count += 1
+                # If the jump has persisted for at least 4 indices, return the start index of the first jump
+                if persistent_jump_count >= 3:
+                    return i - persistent_jump_count
+            else:
+                # Reset the counter if the jump does not persist
+                persistent_jump_count = 0
+                
+        # Return -1 if no persistent significant jump is found
+        return -1
 
+    
+    def get_right_wall_angle(right_data):
+        right_data = [12 if x == float('inf') else x for x in right_data]
+        # randomly choose a number i from 0 to len(right_data)/2
+        # sample the data right_data[i] and right_data[len(right_data) - i]
+        # sum up the differences between the two samples and return that sum
+        for _ in range(10):
+            i = random.randint(0, len(right_data)/2)
+            angle_sum += right_data[i] - right_data[len(right_data) - i]
+        
+        return angle_sum
+        
     def timer_callback(self):
         message = Twist()
-
-        if self.state == 1:  # Following the right wall
-            if self.front_distance < self.front_threshold:
-                self.state = 3
-            elif self.right_distance > self.right_wall_distance + 0.1:
-                self.state = 2
+        
+        linear_x = 0.0
+        angular_z = 0.0
+        
+        if self.state == "finding_wall":
+            # look for wall in front of the robot
+            if self.data:
+                forward_data = self.data[345:375]
+                right_data = self.data[90:270]
+                minimum_distance = min(forward_data)
+                if minimum_distance < 0.3:
+                    self.state = "turning_left_start"
+                    self.turn_counter = 10
+                else:
+                    contiguous_result = self.is_right_wall_contiguous(right_data)
+                    # if the right wall is contiguous, keep moving forward
+                    if contiguous_result != -1 and contiguous_result < 10:
+                        self.state = "turning_right_start"
+                        self.turn_counter = 10
+                    else:
+                        linear_x = 0.1
+                        angular_z = self.get_right_wall_angle(right_data)
+                        
+        if self.state == "turning_right_start":
+            if self.turn_counter > 0:
+                linear_x = 0.0
+                angular_z = -0.1
+                self.turn_counter -= 1
             else:
-                message.linear.x = 0.2
-                # Adjust angular velocity to maintain distance to the right wall
-                message.angular.z = -0.5 * (self.right_distance - self.right_wall_distance)
+                self.state = "turning_right_end"
         
-        elif self.state == 2:  # Right wall disappeared
-            if self.right_distance < self.right_wall_distance + 0.1:
-                self.state = 1
-            message.linear.x = 0.15
-            message.angular.z = -0.3  # Turning right to find the wall
-        
-        elif self.state == 3:  # Front wall too close
-            if self.front_distance > self.front_threshold:
-                self.state = 1
-            message.linear.x = 0
-            message.angular.z = 1.0  # Turning left in place
+        if self.state == "turning_left_start":
+            if self.turn_counter > 0:
+                linear_x = 0.0
+                angular_z = 0.1
+                self.turn_counter -= 1
+            else:
+                self.state = "turning_left_end"
+                    
+        self.get_logger().info("State: %s" % self.state)
+            
+
+        message.linear.x = linear_x
+        message.angular.z = angular_z
 
         self.cmdvel_publisher.publish(message)
 
