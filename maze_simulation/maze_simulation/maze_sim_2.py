@@ -59,25 +59,28 @@ class SolveMaze(Node):
             if right_data[i] == float('inf'):
                 right_data[i] = right_data[i-1]
                 
+        self.get_logger().info(str(right_data[::10]))
+
         angle_sum = 0
         
         for _ in range(30):
             i = random.randint(0, len(right_data)//2 - 1)
             angle_sum += right_data[i] - right_data[len(right_data) - i - 1]
         
-        return angle_sum / 30
+        return angle_sum
     
     def get_right_wall_angle(self, right_data):
         right_data = [12 if x == float('inf') else x for x in right_data]
         # randomly choose a number i from 0 to len(right_data)/2
         # sample the data right_data[i] and right_data[len(right_data) - i]
         # sum up the differences between the two samples and return that sum
+        self.get_logger().info(str(right_data[::10]))
         angle_sum = 0
         for _ in range(30):
             i = random.randint(0, len(right_data)//2 - 1)
             angle_sum += right_data[i] - right_data[len(right_data) - i - 1]
         
-        return angle_sum / 30
+        return angle_sum
         
     def timer_callback(self):
         message = Twist()
@@ -102,7 +105,8 @@ class SolveMaze(Node):
                     #     self.turn_counter = 10
                     # else:
                     linear_x = 0.5
-                    angular_z = self.get_right_wall_angle(right_data)//30
+                    angular_z = self.get_right_wall_angle_with_interp(right_data)
+                    self.get_logger().info("angle: %s" % str(angular_z))
                         
         if self.state == "turning_right_start":
             if self.turn_counter > 0:
