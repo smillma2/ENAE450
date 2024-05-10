@@ -22,6 +22,9 @@ class SolveMaze(Node):
         self.state = "finding_wall"
         self.turn_counter = 10
         
+        # storage for the previous angle sums while turning
+        self.previous_angle_sums = []
+        
         self.data = None
         
 
@@ -29,7 +32,7 @@ class SolveMaze(Node):
         # Extract distances at specific angles
         self.data = data.ranges
         
-    def is_right_wall_contiguous(right_data):
+    def is_right_wall_contiguous(self, right_data):
         right_data = [12 if x == float('inf') else x for x in right_data]
         # Initialize a counter for persistent jumps
         persistent_jump_count = 0
@@ -49,16 +52,27 @@ class SolveMaze(Node):
                 
         # Return -1 if no persistent significant jump is found
         return -1
-
     
-    def get_right_wall_angle(right_data):
+    def get_right_wall_angle_with_interp(self, right_data):
+        # interpolate out the infs
+        for i in range(1, len(right_data)):
+            if right_data[i] == float('inf'):
+                right_data[i] = right_data[i-1]
+        
+        for _ in range(10):
+            i = random.randint(0, len(right_data)//2 - 1)
+            angle_sum += right_data[i] - right_data[len(right_data) - i - 1]
+        
+        return angle_sum
+    
+    def get_right_wall_angle(self, right_data):
         right_data = [12 if x == float('inf') else x for x in right_data]
         # randomly choose a number i from 0 to len(right_data)/2
         # sample the data right_data[i] and right_data[len(right_data) - i]
         # sum up the differences between the two samples and return that sum
         for _ in range(10):
-            i = random.randint(0, len(right_data)/2)
-            angle_sum += right_data[i] - right_data[len(right_data) - i]
+            i = random.randint(0, len(right_data)//2 - 1)
+            angle_sum += right_data[i] - right_data[len(right_data) - i - 1]
         
         return angle_sum
         
@@ -79,18 +93,18 @@ class SolveMaze(Node):
                     self.turn_counter = 10
                 else:
                     contiguous_result = self.is_right_wall_contiguous(right_data)
-                    # if the right wall is contiguous, keep moving forward
-                    if contiguous_result != -1 and contiguous_result < 10:
-                        self.state = "turning_right_start"
-                        self.turn_counter = 10
-                    else:
-                        linear_x = 0.1
-                        angular_z = self.get_right_wall_angle(right_data)
+                    # # if the right wall is contiguous, keep moving forward
+                    # if contiguous_result != -1 and contiguous_result < 10:
+                    #     self.state = "turning_right_start"
+                    #     self.turn_counter = 10
+                    # else:
+                    linear_x = 0.5
+                    angular_z = self.get_right_wall_angle(right_data)//30
                         
         if self.state == "turning_right_start":
             if self.turn_counter > 0:
                 linear_x = 0.0
-                angular_z = -0.1
+                angular_z = -0.5
                 self.turn_counter -= 1
             else:
                 self.state = "turning_right_end"
@@ -98,10 +112,30 @@ class SolveMaze(Node):
         if self.state == "turning_left_start":
             if self.turn_counter > 0:
                 linear_x = 0.0
-                angular_z = 0.1
+                angular_z = 0.5
                 self.turn_counter -= 1
+                self.previous_angle_sums.append(abs(self.get_right_wall_angle(self.data[90:270])))
             else:
                 self.state = "turning_left_end"
+                
+        if self.state == "turning_left_end":
+            if len(self.previous_angle_sums) < 5:
+                linear_x = 0.0
+                angular_z = 0.5
+                self.previous_angle_sums.append(abs(self.get_right_wall_angle(self.data[90:270])))
+            else:
+                # check if the last 5 angle sums are below a certain threshold
+                self.get_logger().info("Sum: %s" % sum(self.previous_angle_sums[-5:]))
+                
+                if sum(self.previous_angle_sums[-5:]) < 10:
+                    self.state = "finding_wall"
+                    self.previous_angle_sums = []
+                    
+                else:
+                    linear_x = 0.0
+                    angular_z = 0.5
+                    self.previous_angle_sums.append(abs(self.get_right_wall_angle(self.data[90:270])))
+                
                     
         self.get_logger().info("State: %s" % self.state)
             
