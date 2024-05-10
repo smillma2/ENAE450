@@ -59,11 +59,17 @@ class SolveMaze(Node):
             if right_data[i] == float('inf'):
                 right_data[i] = right_data[i-1]
                 
+        clipped_right_data = []
+        for i in range(1, len(right_data)):
+            if right_data[i] - right_data[i-1] > 0.5:
+                break
+            clipped_right_data.append(right_data[i])
+                
         angle_sum = 0
         
         for _ in range(30):
-            i = random.randint(0, len(right_data)//2 - 1)
-            angle_sum += right_data[i] - right_data[len(right_data) - i - 1]
+            i = random.randint(0, len(clipped_right_data)//2 - 1)
+            angle_sum += clipped_right_data[i] - clipped_right_data[len(clipped_right_data) - i - 1]
         
         return angle_sum / 30
     
