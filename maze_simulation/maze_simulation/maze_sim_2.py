@@ -80,6 +80,9 @@ class SolveMaze(Node):
         return angle_sum / 30
     
     def linearize_right_wall(self, right_data):
+        for i in range(1, len(right_data)):
+            if right_data[i] == float('inf'):
+                right_data[i] = right_data[i-1]
         center_index = len(right_data) // 2
         
         linearized_data = []
@@ -93,6 +96,8 @@ class SolveMaze(Node):
     def get_right_wall_variance(self, right_data):
         
         linearized_data = self.linearize_right_wall(right_data)
+
+        self.get_logger().info("linearized %s" % str(linearized_data))
         
         return sum([(x - sum(linearized_data)/len(linearized_data))**2 for x in linearized_data]) / len(linearized_data)
         
@@ -108,7 +113,7 @@ class SolveMaze(Node):
                 forward_data = self.data[345:375]
                 right_data = self.data[90:270]
                 minimum_distance = min(forward_data)
-                if minimum_distance < 0.3:
+                if minimum_distance < 0.6:
                     self.state = "turning_left_start"
                     self.turn_counter = 10
                 else:
@@ -119,7 +124,7 @@ class SolveMaze(Node):
                     #     self.turn_counter = 10
                     # else:
                     linear_x = 0.5
-                    angular_z = self.get_right_wall_angle(right_data)
+                    angular_z = self.get_right_wall_angle_with_interp(right_data)
                         
         if self.state == "turning_right_start":
             if self.turn_counter > 0:
@@ -139,19 +144,20 @@ class SolveMaze(Node):
                 self.state = "turning_left_end"
                 
         if self.state == "turning_left_end":
-            if len(self.previous_angle_sums) < 5:
-                linear_x = 0.0
-                angular_z = 0.5
-                self.previous_angle_sums.append(abs(self.get_right_wall_angle(self.data[90:270])))
-            else:
-                variance = self.get_right_wall_variance(self.data[90:270])
-                # check if the signs of the last 3 elements in previous_angle_sums are different from the sign
-                # of the sum of the last 10 elements in previous_angle_sums
-                are_last_three_signs_same = all([x > 0 for x in self.previous_angle_sums[-3:]]) or all([x < 0 for x in self.previous_angle_sums[-3:]])
-                last_10_sum = sum(self.previous_angle_sums[-10:])
-                if are_last_three_signs_same and last_10_sum * self.previous_angle_sums[-1] < 0 and variance < 0.1:
-                    self.state = "finding_wall"
-                    self.previous_angle_sums = []
+            linear_x = 0.0
+            angular_z = 0.5
+            self.previous_angle_sums.append(self.get_right_wall_angle(self.data[90:270]))
+            variance = self.get_right_wall_variance(self.data[90:270])
+            self.get_logger().info("variance %s" % str(variance))
+            self.get_logger().info("angle %s" % str(self.previous_angle_sums[-1]))
+            # check if the signs of the last 3 elements in previous_angle_sums are different from the sign
+            # of the sum of the last 10 elements in previous_angle_sums
+            are_last_three_signs_same = all([x > 0 for x in self.previous_angle_sums[-3:]]) or all([x < 0 for x in self.previous_angle_sums[-3:]])
+            last_10_sum = sum(self.previous_angle_sums[-10:])
+            if are_last_three_signs_same and last_10_sum * self.previous_angle_sums[-1] < 0 and variance < 0.1:
+                self.state = "finding_wall"
+                self.previous_angle_sums = []
+
             
 
         message.linear.x = linear_x
