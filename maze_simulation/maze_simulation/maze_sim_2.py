@@ -55,15 +55,19 @@ class SolveMaze(Node):
     
     def get_right_wall_angle_with_interp(self, right_data):
         # interpolate out the infs
+        right_data[0] = 6 if right_data[0] == float('inf') else right_data[0]
         for i in range(1, len(right_data)):
             if right_data[i] == float('inf'):
                 right_data[i] = right_data[i-1]
                 
-        clipped_right_data = []
+        clipped_right_data = [[]]
         for i in range(1, len(right_data)):
             if right_data[i] - right_data[i-1] > 0.5:
-                break
-            clipped_right_data.append(right_data[i])
+                clipped_right_data.append([])
+            clipped_right_data[-1].append(right_data[i])
+            
+        # get longest sublist
+        clipped_right_data = max(clipped_right_data, key=len)
                 
         angle_sum = 0
         
@@ -71,7 +75,7 @@ class SolveMaze(Node):
             i = random.randint(0, len(clipped_right_data)//2 - 1)
             angle_sum += clipped_right_data[i] - clipped_right_data[len(clipped_right_data) - i - 1]
         
-        return angle_sum / 30
+        return angle_sum / 10
     
     def get_right_wall_angle(self, right_data):
         right_data = [12 if x == float('inf') else x for x in right_data]
@@ -86,6 +90,7 @@ class SolveMaze(Node):
         return angle_sum / 30
     
     def linearize_right_wall(self, right_data):
+        right_data[0] = 6 if right_data[0] == float('inf') else right_data[0]
         for i in range(1, len(right_data)):
             if right_data[i] == float('inf'):
                 right_data[i] = right_data[i-1]
