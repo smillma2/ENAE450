@@ -119,7 +119,7 @@ class SolveMaze(Node):
                     #     self.turn_counter = 10
                     # else:
                     linear_x = 0.5
-                    angular_z = self.get_right_wall_angle(right_data)//30
+                    angular_z = self.get_right_wall_angle(right_data)
                         
         if self.state == "turning_right_start":
             if self.turn_counter > 0:
