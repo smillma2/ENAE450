@@ -58,23 +58,26 @@ class SolveMaze(Node):
         for i in range(1, len(right_data)):
             if right_data[i] == float('inf'):
                 right_data[i] = right_data[i-1]
+                
+        angle_sum = 0
         
-        for _ in range(10):
+        for _ in range(30):
             i = random.randint(0, len(right_data)//2 - 1)
             angle_sum += right_data[i] - right_data[len(right_data) - i - 1]
         
-        return angle_sum
+        return angle_sum / 30
     
     def get_right_wall_angle(self, right_data):
         right_data = [12 if x == float('inf') else x for x in right_data]
         # randomly choose a number i from 0 to len(right_data)/2
         # sample the data right_data[i] and right_data[len(right_data) - i]
         # sum up the differences between the two samples and return that sum
-        for _ in range(10):
+        angle_sum = 0
+        for _ in range(30):
             i = random.randint(0, len(right_data)//2 - 1)
             angle_sum += right_data[i] - right_data[len(right_data) - i - 1]
         
-        return angle_sum
+        return angle_sum / 30
         
     def timer_callback(self):
         message = Twist()
@@ -124,17 +127,7 @@ class SolveMaze(Node):
                 angular_z = 0.5
                 self.previous_angle_sums.append(abs(self.get_right_wall_angle(self.data[90:270])))
             else:
-                # check if the last 5 angle sums are below a certain threshold
-                self.get_logger().info("Sum: %s" % sum(self.previous_angle_sums[-5:]))
-                
-                if sum(self.previous_angle_sums[-5:]) < 10:
-                    self.state = "finding_wall"
-                    self.previous_angle_sums = []
-                    
-                else:
-                    linear_x = 0.0
-                    angular_z = 0.5
-                    self.previous_angle_sums.append(abs(self.get_right_wall_angle(self.data[90:270])))
+                self.get_logger().info("Previous Angle Sums: %s" % str(self.previous_angle_sums))
                 
                     
         self.get_logger().info("State: %s" % self.state)
